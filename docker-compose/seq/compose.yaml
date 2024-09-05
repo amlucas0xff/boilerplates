@@ -18,7 +18,6 @@ services:
       - ${DATA_PATH:-./data}:/data
     ports:
       - ${PORT_INGESTION:-5341}:5341
-      - 8282:80
     networks:
       - traefik
       - default
