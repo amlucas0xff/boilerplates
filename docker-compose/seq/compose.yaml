@@ -1,0 +1,57 @@
+---
+networks:
+  traefik:
+    external: true
+
+services:
+  seq:
+    image: datalust/seq:2024.3
+    container_name: seq
+    environment:
+      - ACCEPT_EULA=${ACCEPT_EULA}
+      - SEQ_API_CANONICALURI=${SEQ_API_CANONICALURI}
+      - SEQ_FIRSTRUN_ADMINUSERNAME=${SEQ_FIRSTRUN_ADMINUSERNAME}
+      - SEQ_FIRSTRUN_ADMINPASSWORDHASH=${SEQ_FIRSTRUN_ADMINPASSWORDHASH}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ${DATA_PATH:-./data}:/data
+    ports:
+      - ${PORT_INGESTION:-5341}:5341
+      - 8282:80
+    networks:
+      - traefik
+      - default
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.seq.service=seq"
+      - "traefik.http.routers.seq.entrypoints=https"
+      - "traefik.http.routers.seq.rule=Host(`${EXTERNAL_URL}`)"
+      - "traefik.http.routers.seq.tls=true"
+      - "traefik.http.routers.seq.tls.certresolver=${CERT_RESOLVER}"
+      - "traefik.http.services.seq.loadbalancer.server.port=${PORT:-80}"
+
+  seq-input-gelf:
+    image: datalust/seq-input-gelf:3.0
+    ports:
+      - "12201:12201/udp"
+    environment:
+      SEQ_ADDRESS: "http://seq:5341"
+    restart: unless-stopped
+    depends_on:
+      seq:
+        condition: service_started
+    
+  seq-input-syslog:
+    image: datalust/seq-input-syslog
+    ports:
+      - "514:514/udp"
+    environment:
+      SEQ_ADDRESS: "http://seq:5341"
+    restart: unless-stopped
+    depends_on:
+      seq:
+        condition: service_started
+          
