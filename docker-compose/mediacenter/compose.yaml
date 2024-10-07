@@ -1,0 +1,240 @@
+---
+# Media Center Stack
+# Author: https://github.com/amlucas0xff
+
+# Open the `.env` file located in the same directory as the compose.yaml file.
+# Adjust the variables in the `.env` file to suit your requirements.
+
+# Visit https://www.plex.tv/claim/ to generate your claim token.
+# Update the .env file by setting the `PLEX_CLAIM_TOKEN` variable to the provided token.
+
+# Before deploying the stack, create a network for your services by running the following command
+# `docker network create traefik`
+
+# Deploy the Media Center Stack
+# `docker compose up -d --force-recreate`
+
+networks:
+  traefik:
+    external: true
+
+services:
+  plex:
+    image: plexinc/pms-docker:1.41.0.8994-f2c27da23
+    container_name: stack-mc-plex
+    expose:
+      - 32400
+    environment:
+      - PLEX_UID=${PUID:-1000}
+      - PLEX_GID=${PGID:-1000}
+      - PLEX_CLAIM=${PLEX_CLAIM_TOKEN}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/plex/config:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media:/data
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/plex/transcode/:/transcode
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/plex/logs/:/config/Library/Application Support/Plex Media Server/Logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - traefik
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.plex.rule=Host(`${PLEX_EXTERNAL_URL}`)
+      - traefik.http.services.plex.loadbalancer.server.port=32400
+      - traefik.http.routers.plex.tls=true
+      - traefik.http.routers.plex.tls.certresolver=${CERT_RESOLVER}
+
+  prowlarr:
+    image: linuxserver/prowlarr:nightly-version-1.25.2.4776
+    container_name: stack-mc-prowlarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/prowlarr/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_EXTERNAL_URL}`)
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+      - traefik.http.routers.prowlarr.tls=true
+      - traefik.http.routers.prowlarr.tls.certresolver=${CERT_RESOLVER}
+
+  sonarr:
+    image: linuxserver/sonarr:version-4.0.9.2244
+    container_name: stack-mc-sonarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/sonarr/config/sonarr:/config 
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media:/media 
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    expose:
+      - 8989/tcp 
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.sonarr.rule=Host(`${SONARR_EXTERNAL_URL}`)
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+      - traefik.http.routers.sonarr.tls=true
+      - traefik.http.routers.sonarr.tls.certresolver=${CERT_RESOLVER}
+
+  radarr:
+    image: linuxserver/radarr:nightly-version-5.12.2.9298
+    container_name: stack-mc-radarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/radarr/config/radarr:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media:/media 
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    expose:
+      - 7878/tcp 
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.radarr.rule=Host(`${RADARR_EXTERNAL_URL}`)
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+      - traefik.http.routers.radarr.tls=true
+      - traefik.http.routers.radarr.tls.certresolver=${CERT_RESOLVER}
+
+  lidarr:
+    image: linuxserver/lidarr:nightly-version-2.6.4.4393
+    container_name: stack-mc-lidarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/lidarr/config/lidarr:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media 
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro    
+    expose:
+      - 8686/tcp 
+    ports:
+      - 8686:8686/tcp 
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.lidarr.rule=Host(`${LIDARR_EXTERNAL_URL}`)
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+      - traefik.http.routers.lidarr.tls=true
+      - traefik.http.routers.lidarr.tls.certresolver=${CERT_RESOLVER}
+
+  readarr:
+    image: linuxserver/readarr:0.4.0-nightly
+    container_name: stack-mc-readarr
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/readarr/config:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media:/media 
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro    
+    expose:
+      - 8787/tcp 
+    ports:
+      - 8787:8787/tcp 
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.readarr.rule=Host(`${READARR_EXTERNAL_URL}`)
+      - traefik.http.services.readarr.loadbalancer.server.port=8787
+      - traefik.http.routers.readarr.tls=true
+      - traefik.http.routers.readarr.tls.certresolver=${CERT_RESOLVER}
+
+  emby:
+    image: linuxserver/emby:version-4.8.10.0
+    container_name: stack-mc-emby
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/emby/config/emby:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media:/data
+      - /media:/media
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro   
+    expose:
+      - 8096/tcp 
+      - 8920/tcp
+    ports:
+      - 8096:8096/tcp 
+    networks:
+      - traefik
+    devices:
+      - /dev/dri:/dev/dri
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.emby.rule=Host(`${EMBY_EXTERNAL_URL}`)
+      - traefik.http.services.emby.loadbalancer.server.port=8096
+      - traefik.http.routers.emby.tls=true
+      - traefik.http.routers.emby.tls.certresolver=${CERT_RESOLVER}
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:v3.3.21
+    container_name: stack-mc-flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    expose:
+      - 8191/tcp 
+    networks:
+      - traefik
+    restart: unless-stopped
+
+  qbittorrent:
+    image: linuxserver/qbittorrent:version-5.0.0-r1
+    container_name: stack-mc-qbittorrent
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/qbittorrent/config/qbittorrent:/config
+      - ${CONTAINER_BASEPATH:-/opt/stacks/mp/data}/media/downloads:/downloads/
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - traefik
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik
+      - traefik.http.routers.qbittorrent.rule=Host(`${QBITTORRENT_EXTERNAL_URL}`)
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+      - traefik.http.routers.qbittorrent.tls=true
+      - traefik.http.routers.qbittorrent.tls.certresolver=${CERT_RESOLVER}
+
