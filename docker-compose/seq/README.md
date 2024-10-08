@@ -31,14 +31,5 @@
   > **Alerting and Notifications**: Seq can send alerts and notifications based on the log data received, which can be configured to use various outputs like email, Slack, or other services.
 
 ### License
-
 MIT License
 
-### Technologies
-- Node.js Logging Libraries
-
-### License
-
-MIT License
-
--
