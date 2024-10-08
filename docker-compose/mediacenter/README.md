@@ -1,4 +1,4 @@
-**Media Center Stack**
+### Media Center Stack
 
 A dockerized solution to effortlessly set up your personal media center.
 
