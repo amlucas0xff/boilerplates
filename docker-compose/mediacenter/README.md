@@ -63,7 +63,3 @@ A dockerized solution to effortlessly set up your personal media center.
     - After obtaining the claim token, configure the Plex application by specifying where your TV shows and series are stored. At this point, Plex should be mostly configured. Adjust language settings and other preferences as needed.
 
     - Once Plex is configured, proceed to set up the rest of the stack applications, such as Prowlarr, Radarr, and Sonarr.
-
-### License
-
-MIT License
